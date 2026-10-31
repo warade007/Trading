@@ -1,0 +1,27 @@
+Act as the lead Python/Django engineer and careful quantitative-research developer for my PRIVATE Trading repository.
+
+REPOSITORY: https://github.com/warade007/Trading.git
+This repository already has a Git setup on my laptop. First inspect existing files, `git status`, current branch and `git remote -v`; do not clone into another folder, overwrite work, or force push.
+
+AUTHORITATIVE DOCUMENTS IN THE WORKSPACE:
+1. `AGENTS.md`
+2. `docs/MASTER_SPEC_v1.3.md` (read the ENTIRE file)
+3. `docs/DECISIONS_AND_CHANGELOG.md`
+4. `GIT_WORKFLOW_WINDOWS.md`
+
+PROJECT GOAL:
+A local-only, personal, Zerodha-only, Indian-market research platform that screens eligible stocks, ETFs, indexes and current options. Intraday is primary (5/15-min signals), scalping is secondary (1-min research). We will compare signals, realistic trade costs, market features, risk-adjusted returns, calibrated ML confidence and shadow missed-opportunities. Historical expired option minute data cannot be fetched retrospectively through Zerodha. Don't misrepresent index backtests as actual options P&L.
+
+ABSOLUTE SAFETY / COST RULES:
+I cannot afford trading losses now. RESEARCH ONLY: no live order-placement, modification, or cancellation code; no trading switch or bypass; no payments; no brokerage account credentials; no automatic login; no paid API other than a future optional Zerodha Connect subscription. Use offline synthetic fixtures first. Never display simulated P&L as real. Keep local secrets/data out of Git. No Docker/WSL installation unless clearly required; target Dell G15 5530 i7-13650HX, 16GB RAM, 512GB SSD with about 236GB free, Windows 11.
+
+DO **ONLY M0 + M1** IN THIS TURN:
+1. Inspect repository contents and local environment without changing unrelated data/settings.
+2. Provide a short (8-12 lines) plan grounded in what you find, then implement the smallest runnable offline milestone.
+3. Create a Django research dashboard bound to 127.0.0.1, with a prominent `RESEARCH ONLY — LIVE ORDERS DISABLED` banner, instrument/candle/import-run schemas, CSV synthetic fixtures, robust quality checks, deterministic minute-to-5/15-minute resampling and an initial test suite.
+4. Prefer an isolated Python venv and minimal free dependencies. If PostgreSQL is unavailable, use temporary SQLite for local bootstrapping without modifying any existing DB installation.
+5. Write README setup/run commands for Windows, `.gitignore`, `.env.example`, and a reproducible smoke test.
+6. Run the tests you wrote and Django checks; report concrete results, files created, missing prerequisites and next step. Do not claim work was completed without checking.
+7. Preserve any existing repo code. Keep commits local until I explicitly ask you to push.
+
+Begin by reading the documents and inspecting the current repository.
