@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Local Research | Indian Market Lab</title>
+  <style>
+    :root{color-scheme:dark;font:15px/1.6 Segoe UI,system-ui,sans-serif;background:#10181e;color:#e2ecef}
+    *{box-sizing:border-box}body{margin:0}main{max-width:1200px;margin:auto;padding:28px}
+    .safety{background:#f4d582;color:#2e2612;padding:12px 24px;text-align:center;font-weight:800;letter-spacing:.06em}
+    header{display:flex;justify-content:space-between;align-items:center;gap:16px}h1{font-size:32px;line-height:1.2;margin:8px 0}h2{font-size:18px;margin:0 0 12px}
+    .eyebrow,.muted{color:#9baeb8}.eyebrow{text-transform:uppercase;letter-spacing:.16em;font-size:12px}
+    .pill{border:1px solid #45665c;border-radius:24px;padding:6px 14px;color:#80e1c5;white-space:nowrap}
+    .notice{padding:14px 18px;border-left:3px solid #f4d582;background:#29291f;margin:24px 0}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:20px 0}.card,section{background:#18242c;border:1px solid #2b3c46;border-radius:10px;padding:20px;margin-bottom:18px}
+    .grid .card{margin:0}.number{font-size:30px;font-weight:650;color:#80e1c5}.columns{display:grid;grid-template-columns:2fr 1fr;gap:18px}
+    a{color:#80e1c5}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:10px 8px;border-bottom:1px solid #2b3c46}th{color:#9baeb8;font-weight:500}
+    .scroll{overflow-x:auto}code{color:#f4d582;overflow-wrap:anywhere}dt{color:#9baeb8;margin-top:12px}dd{margin:0;overflow-wrap:anywhere}svg{width:100%;height:auto}ul{padding-left:20px}.compact{font-size:13px}footer{color:#9baeb8;padding:10px 0 30px}
+    @media(max-width:800px){main{padding:16px}.grid,.columns{grid-template-columns:1fr}header{display:block}.pill{display:inline-block;margin-top:12px}}
+  </style>
+</head>
+<body>
+<div class="safety">RESEARCH ONLY — LIVE ORDERS DISABLED</div>
+<main>
+  <header><div><div class="eyebrow">Indian Market Lab / Local workspace</div><h1>Research dashboard</h1><p class="muted">Intraday data foundation · Synthetic research datasets</p></div><div><a class="pill" href="/settings/broker/">Broker Settings</a><p class="muted compact">Optional read-only Zerodha connection</p></div></header>
+  {% if job.source_kind == 'SYNTHETIC' %}<div class="notice"><strong>SYNTHETIC DEMO — NOT ACTUAL PERFORMANCE</strong><br>Artificial prices for engineering validation. No signals, trades or investment returns.</div>
+  {% elif job %}<div class="notice"><strong>USER-SUPPLIED DATA — SOURCE NOT INDEPENDENTLY VERIFIED</strong><br>Coverage describes the declared sessions only. This is not a performance report.</div>
+  {% else %}<div class="notice">No dataset loaded. In PowerShell, run <code>.\.venv\Scripts\python.exe manage.py load_demo</code> after migrations.</div>{% endif %}
+  {% if job %}
+  <div class="grid">
+    <div class="card"><div class="muted">{{ job.source_kind }} · 1-minute coverage</div><div class="number">{{ job.coverage }}%</div><div>{{ job.imported_minutes }} / {{ job.expected_minutes }} declared minutes</div></div>
+    <div class="card"><div class="muted">Dataset quality issues</div><div class="number">{{ issue_count }}</div><div>{{ job.status }} · gaps stay missing</div></div>
+    <div class="card"><div class="muted">Stored bars · {{ job.source_kind }}</div>{% for count in counts %}<div><strong>{{ count.total }}</strong> × {{ count.interval }} minute</div>{% empty %}<div>No candles accepted</div>{% endfor %}</div>
+  </div>
+  <div class="columns"><section>
+    <h2>{{ job.snapshot.instrument.symbol|default:'Rejected import' }} · Latest complete 5-minute candles</h2>
+    <p class="muted compact">{{ job.source_kind }} · {{ job.label }} · Chart shows up to 75 bars, equally spaced; gaps are not interpolated.</p>
+    {% if glyphs %}
+    <svg viewBox="0 0 800 225" role="img" aria-label="{{ job.source_kind }} five-minute candlestick chart">
+      <line x1="0" y1="210" x2="800" y2="210" stroke="#40535d"/>
+      {% for g in glyphs %}<line x1="{{ g.x }}" y1="{{ g.high }}" x2="{{ g.x }}" y2="{{ g.low }}" stroke="{{ g.color }}"/><rect x="{{ g.left }}" y="{{ g.top }}" width="4" height="{{ g.height }}" fill="{{ g.color }}"/>{% endfor %}
+    </svg>
+    <p class="compact muted">Price range {{ chart_min }}–{{ chart_max }} · {{ first_bar.timestamp|date:'d M Y H:i' }} to {{ last_bar.available_at|date:'d M Y H:i' }} IST</p>
+    {% else %}<p>No complete 5-minute candles. Run <code>resample_bars --dataset {{ job.pk }} --interval 5</code>.</p>{% endif %}
+    <h2>Latest source minutes</h2><div class="scroll"><table><thead><tr><th>Bar open · IST</th><th>Open</th><th>High</th><th>Low</th><th>Close</th><th>Volume</th></tr></thead><tbody>
+    {% for bar in recent %}<tr><td>{{ bar.timestamp|date:'d M H:i' }}</td><td>{{ bar.open }}</td><td>{{ bar.high }}</td><td>{{ bar.low }}</td><td>{{ bar.close }}</td><td>{{ bar.volume|default_if_none:'Unavailable' }}</td></tr>{% endfor %}
+    </tbody></table></div>
+  </section><section><h2>Dataset provenance</h2><dl class="compact">
+    <dt>Instrument snapshot</dt><dd>{{ job.snapshot.instrument|default:'None' }} · {{ job.snapshot.as_of|date:'Y-m-d' }}</dd>
+    <dt>Source</dt><dd>{{ job.source_reference }}</dd><dt>Imported · IST</dt><dd>{{ job.imported_at|date:'Y-m-d H:i:s' }}</dd>
+    <dt>CSV SHA-256</dt><dd><code>{{ job.csv_sha256 }}</code></dd><dt>Manifest SHA-256</dt><dd><code>{{ job.manifest_sha256 }}</code></dd>
+    <dt>Engine version</dt><dd>{{ job.engine_version }}</dd><dt>Timestamp convention</dt><dd>Bar open; stored in UTC, displayed in IST. A derived candle becomes available at its close.</dd>
+  </dl></section></div>
+  <section><h2>Data quality report</h2><p class="muted compact">Up to 100 issues shown. Coverage is measured against explicitly declared sessions, including entirely missing declared days. An undeclared day is not assessed. No calendar or corporate-action certification.</p>
+    {% for issue in issues %}<p><strong>{{ issue.severity }} · {{ issue.code }}</strong>{% if issue.row %} · CSV row {{ issue.row }}{% endif %}<br>{{ issue.message }}</p>{% empty %}<p>No recorded issues in the loaded dataset.</p>{% endfor %}
+  </section>
+  {% endif %}
+  <section><h2>Local datasets</h2><div class="scroll"><table><thead><tr><th>Dataset</th><th>Source</th><th>Status</th><th>1m coverage</th></tr></thead><tbody>{% for item in jobs %}<tr><td><a href="?dataset={{ item.pk }}">{{ item.label }}</a></td><td>{{ item.source_kind }}</td><td>{{ item.status }}</td><td>{{ item.imported_minutes }} / {{ item.expected_minutes }}</td></tr>{% empty %}<tr><td colspan="4">No imports yet.</td></tr>{% endfor %}</tbody></table></div></section>
+  <section><h2>Research boundaries</h2><ul>
+    <li>Expired option minute history before an authorized archive: unavailable.</li>
+    <li>Historical depth and intrabar event ordering: unavailable.</li>
+    <li>Index signals without exact option contract history are not a valid options P&amp;L backtest.</li>
+    <li>Unverified news timestamps are not qualified causal features.</li>
+  </ul><p class="muted">Next: deterministic backtesting baselines, conservative simulated fills and versioned costs. Scanner, indicators, risk simulation and ML are later milestones.</p></section>
+  <footer>Private local research · Read-only dashboard · All imports run through local management commands</footer>
+</main></body></html>

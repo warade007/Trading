@@ -1,0 +1,31 @@
+{
+  "format_version": 1,
+  "dataset_label": "SYNTHETIC-DEMO-EQUITY-v1",
+  "source_kind": "SYNTHETIC",
+  "source_reference": "scripts/generate_fixture.py v1; deterministic integer formula; no random seed",
+  "instrument": {
+    "exchange": "DEMO_NSE",
+    "symbol": "SYNTH-EQ",
+    "kind": "EQUITY",
+    "snapshot_date": "2026-10-29",
+    "token": "synthetic-equity-v1",
+    "underlying": "",
+    "expiry": null,
+    "strike": null,
+    "option_type": "",
+    "lot_size": 1,
+    "tick_size": "0.05"
+  },
+  "sessions": [
+    {
+      "date": "2026-10-29",
+      "open": "09:15",
+      "close": "15:30"
+    },
+    {
+      "date": "2026-10-30",
+      "open": "09:15",
+      "close": "15:30"
+    }
+  ]
+}

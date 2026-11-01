@@ -1,0 +1,5 @@
+{% extends 'brokers/base.html' %}{% block content %}
+<h1>Administrator sign in</h1><p>Use your local Django administrator account. This is separate from Zerodha login.</p>
+<section class="card"><form method="post" autocomplete="on">{% csrf_token %}{{ form.as_p }}<button type="submit">Sign in</button></form></section>
+<p class="muted">First use: create your local administrator in PowerShell with <code>.\.venv\Scripts\python.exe manage.py createsuperuser</code>. Choose your password in that terminal; never send it to chat.</p>
+{% endblock %}

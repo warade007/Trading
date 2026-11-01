@@ -1,0 +1,18 @@
+{% extends 'brokers/base.html' %}{% block content %}
+<h1>Broker Settings</h1><p>Zerodha Kite Connect · Research-only market data</p>
+{% if key_error %}<div class="notice error">{{ key_error }}</div>{% endif %}
+<section class="card"><h2>Connection status</h2><dl>
+<dt>Status</dt><dd>{{ connection_status }}</dd><dt>Saved API key</dt><dd>{{ masked_api_key }}</dd><dt>API secret</dt><dd>{% if has_secret %}Saved · encrypted · never redisplayed{% else %}Not set{% endif %}</dd>
+<dt>Last successful login · IST</dt><dd>{{ last_login|date:'Y-m-d H:i:s'|default:'Not yet connected' }}</dd><dt>Expected session expiry · IST</dt><dd>{{ expiry|date:'Y-m-d H:i:s'|default:'No active session' }}</dd>
+<dt>API error details</dt><dd>{{ error_detail|default:'None' }}</dd></dl><p class="muted">Expiry is an estimate; the broker can invalidate a session earlier. Daily interactive login remains required.</p></section>
+<section class="card"><h2>Zerodha configuration</h2><form method="post" action="{% url 'broker_settings' %}" autocomplete="off">{% csrf_token %}{{ form.as_p }}<button type="submit">Save / Update Settings</button></form>
+<p class="muted">API key and secret inputs are always blank after saving. Changed credentials or enabled state end local API sessions and pending logins. No connection is made when settings are saved.</p>
+<p>Register exactly <code>http://127.0.0.1:8001/kite/callback</code> as your app's redirect URL in Zerodha.</p></section>
+<section class="card"><h2>Authentication and connectivity</h2><div class="actions">
+<form method="post" action="{% url 'broker_login' %}">{% csrf_token %}<button type="submit">Login with Zerodha</button></form>
+<form method="post" action="{% url 'broker_test' %}">{% csrf_token %}<button type="submit">Test Connection</button></form>
+<form method="post" action="{% url 'broker_disconnect' %}">{% csrf_token %}<button type="submit">Disconnect</button></form></div>
+<p class="muted">Login opens the official Zerodha website. Enter broker passwords and OTPs only there. Test Connection reads your profile using an active API session; it cannot test a saved secret until you complete login. It does not call any order API.</p></section>
+<section class="card"><h2>Delete saved credentials</h2><form method="post" action="{% url 'broker_delete' %}">{% csrf_token %}<label><input type="checkbox" name="confirm" value="delete" required> Delete the saved API key, API secret and local access tokens</label><button class="danger" type="submit">Delete credentials</button></form><p class="muted">Disconnect/delete attempts to revoke the active broker token before clearing local tokens. Safe audit history remains. Previously made backups retain their encrypted contents.</p></section>
+<section class="card"><h2>Recent safe audit events</h2><div class="scroll"><table><thead><tr><th>Time · IST</th><th>Event</th><th>Outcome</th><th>Safe error code</th></tr></thead><tbody>{% for item in audit_events %}<tr><td>{{ item.created_at|date:'Y-m-d H:i:s' }}</td><td>{{ item.event }}</td><td>{{ item.outcome }}</td><td>{{ item.error_code|default:'—' }}</td></tr>{% empty %}<tr><td colspan="4">No broker events yet.</td></tr>{% endfor %}</tbody></table></div></section>
+{% endblock %}
