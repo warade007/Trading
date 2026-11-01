@@ -9,13 +9,22 @@ from urllib.error import HTTPError, URLError
 from urllib.request import ProxyHandler, Request, build_opener
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 
 
 def main():
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 0))
         port = probe.getsockname()[1]
-    url = f"http://127.0.0.1:{port}/"
+    base = f"http://127.0.0.1:{port}/"
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+    import django
+    django.setup()
+    from research.models import DataIngestJob
+    demo_id = DataIngestJob.objects.filter(source_kind="SYNTHETIC", status="ACCEPTED").order_by("-id").values_list("id", flat=True).first()
+    if demo_id is None:
+        raise RuntimeError("Run load_demo before the smoke test.")
+    url = f"{base}?dataset={demo_id}"
     opener = build_opener(ProxyHandler({}))
     creationflags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
     process = subprocess.Popen(
@@ -44,7 +53,7 @@ def main():
         for request, expected in (
             (Request(url, method="POST", data=b""), 405),
             (Request(url, headers={"Host": "untrusted.example"}), 400),
-            (Request(url + "orders/"), 404),
+            (Request(base + "orders/"), 404),
         ):
             try:
                 opener.open(request, timeout=2).close()

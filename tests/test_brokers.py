@@ -2,6 +2,7 @@ import io
 import json
 import logging
 import os
+import re
 import tempfile
 import uuid
 from pathlib import Path
@@ -137,6 +138,45 @@ class EncryptionTests(BrokerFixture, TestCase):
 
 
 class BrokerPageTests(BrokerFixture, TestCase):
+    def test_browser_login_with_csrf_cookie_form_token_and_origin(self):
+        browser = Client(enforce_csrf_checks=True)
+        response = browser.get("/accounts/login/", **HOST)
+        self.assertEqual(response["Referrer-Policy"], "same-origin")
+        self.assertEqual(response["Cache-Control"], "no-store")
+        token = re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', response.content.decode())[1]
+        old_cookie = browser.cookies[settings.CSRF_COOKIE_NAME].value
+        response = browser.post("/accounts/login/", {
+            "username": "testadministrator", "password": "synthetic-local-password",
+            "csrfmiddlewaretoken": token,
+        }, HTTP_ORIGIN="http://127.0.0.1:8001", HTTP_REFERER="http://127.0.0.1:8001/accounts/login/", **HOST)
+        self.assertRedirects(response, "/settings/broker/", fetch_redirect_response=False)
+        self.assertNotEqual(browser.cookies[settings.CSRF_COOKIE_NAME].value, old_cookie)
+        self.assertEqual(browser.get("/settings/broker/", **HOST).status_code, 200)
+
+    def test_csrf_rejects_null_and_cross_origin_even_with_valid_token(self):
+        browser = Client(enforce_csrf_checks=True)
+        response = browser.get("/accounts/login/", **HOST)
+        token = re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', response.content.decode())[1]
+        for origin in ("null", "https://untrusted.example", "http://127.0.0.1:8002"):
+            with self.subTest(origin=origin):
+                response = browser.post("/accounts/login/", {"username": "testadministrator", "password": "synthetic-local-password", "csrfmiddlewaretoken": token}, HTTP_ORIGIN=origin, **HOST)
+                self.assertEqual(response.status_code, 403)
+                self.assertContains(response, "Open a fresh sign-in page", status_code=403)
+                self.assertNotIn("_auth_user_id", browser.session)
+
+    def test_missing_or_stale_csrf_token_has_safe_recovery_page(self):
+        browser = Client(enforce_csrf_checks=True)
+        browser.get("/accounts/login/", **HOST)
+        for data in ({}, {"csrfmiddlewaretoken": "a" * 64}):
+            response = browser.post("/accounts/login/", {**data, "password": SECRET}, HTTP_ORIGIN="http://127.0.0.1:8001", **HOST)
+            self.assertEqual(response.status_code, 403)
+            self.assertContains(response, "Please reload and try again", status_code=403)
+            self.assertNotContains(response, SECRET, status_code=403)
+            self.assertNotContains(response, "DEBUG=True", status_code=403)
+
+    def test_callback_keeps_strict_referrer_policy(self):
+        self.assertEqual(self.client.get("/kite/callback", **HOST)["Referrer-Policy"], "no-referrer")
+
     def test_anonymous_and_nonadministrator_rejected(self):
         self.client.logout()
         response = self.client.get("/settings/broker/", **HOST)

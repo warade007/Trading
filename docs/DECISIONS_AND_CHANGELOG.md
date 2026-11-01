@@ -1,6 +1,6 @@
 # Decisions and change log
 
-**Current governing spec:** v1.4.1 — 1 November 2026; legacy master-spec filename retained.
+**Current governing spec:** v1.5 — 1 November 2026; legacy master-spec filename retained.
 
 ## Locked decisions
 
@@ -103,3 +103,91 @@
 - Databases, the external DPAPI key vault, key backups, raw archives, logs, caches
   and virtual environments are excluded. Existing Git history is preserved;
   publication uses a normal push to main, without force or history replacement.
+
+## 1 November 2026 — login form CSRF compatibility fix
+
+- Investigated the reported login 403. Local middleware overrode Django's
+  same-origin referrer policy with blanket no-referrer; browser form navigation
+  can consequently use a null Origin that Django rejects.
+- Restored same-origin referrer policy for local forms, suppressing external
+  referrers. Kept no-referrer on the token-bearing Kite callback. CSRF/origin
+  checks remain enabled; DEBUG remains false.
+- Added a safe 403 recovery page and regression coverage for a complete browser
+  login with CSRF cookie, rendered form token and Origin; wrong/null origins,
+  missing/stale tokens and callback referrer protection remain covered.
+- Validation: **83 tests passed in 16.913 seconds**; system check passed and no
+  migration drift. Actual HTTP same-origin POST passed CSRF and reached form
+  validation with blank credentials; null-origin POST returned the safe 403.
+  Restarted the localhost server on 8001. No real credentials or broker calls
+  were used; changes remain local pending publication approval.
+
+## 1 November 2026 — complete code and implementation-status audit
+
+- Compared latest fetched origin/main and local HEAD at 534c7fa, preserving all
+  uncommitted CSRF corrections. Independently tested published source: 79 tests
+  passed in 15.801s. Local corrected source: 83 passed in 17.069s.
+- System check, migration consistency and dependency consistency passed; all
+  migrations applied. Deployment check reports four documented HTTPS/cookie
+  warnings for the deliberate localhost HTTP setup, not a production-ready result.
+- Reviewed settings, credential/key protection, login/state/expiry, read-only
+  guards, raw archives, CSV validation, resampling, all tests and missing modules.
+  No new critical reachable credential/order flaw or failing test was verified;
+  no unrelated functionality was changed. Existing local CSRF fix stays intact.
+- OSV check of 29 package versions found two moderate Autobahn advisories (four
+  alias IDs). The official SDK pins the affected version; affected WebSocket/server
+  paths are unused. Documented the upstream compatibility constraint rather than
+  forcing an inconsistent package upgrade. Streaming remains unimplemented.
+- Confirmed historical service calls exist but collection/persistence/provenance
+  workflow does not; current DB has only synthetic candles. Documented the
+  instrument snapshot-date/backfill design gap and missing M2/M4–M7 modules.
+- Source/history scans found no reviewed secret-pattern/private-file/configured
+  API-key matches. External key placement and Git exclusions verified. Five
+  research tables retain identical row counts and content hashes; no reset,
+  migration, credential decryption or new real broker request was performed.
+- Added CODE_AUDIT_2026-11-01.md and linked verified status from README, broker
+  runbook and governing spec. Audit changes remain local, uncommitted/unpushed.
+
+## 1 November 2026 — v1.5 bounded historical ingestion and first NIFTY 50 sample
+
+- Owner confirmed the connection and selected NIFTY 50 for the first read-only
+  historical download. Added administrator-only Historical Data page, NSE master
+  synchronization, bounded date selection and download orchestration commands.
+- Reused existing BrokerReadOnlyClient, Instrument/Snapshot, DataIngestJob,
+  Candle and DataQualityIssue. Added content-addressed master snapshot and download
+  job records. Forward migrations 0002/0003 preserve existing data; no reset.
+- Added broker-only manifest v2 with explicit ZERODHA provenance and observation
+  semantics. Current metadata is never backdated; historical validity/calendar
+  limitations remain visible. Index lot/tick/volume are unavailable/NULL, retaining
+  original broker fields in private raw archives.
+- Applied migrations after private backup
+  data/backups/before-history-20261101T155621863245.sqlite3. Verified every
+  pre-existing research row and original column value remained unchanged.
+- Actual read-only verification: NSE master 1 contains 10,412 records. Download 1,
+  dataset 2: NIFTY 50, 2026-10-30, 375/375 1m candles; 75 complete 5m and 25 complete
+  15m bars. Zero price/schema errors; two explicit CURRENT_METADATA and
+  ASSUMED_CALENDAR warnings. Repeat request reused the stored dataset without a
+  new historical API call. Original 950 synthetic/derived candles retained.
+- Tests: 21 new mocked historical tests plus 83 existing tests, **104 passed in
+  62.228 seconds**. System check, dependency check and migration-drift check passed.
+  Smoke test now explicitly selects its synthetic fixture so real data can be
+  the default dashboard dataset. Actual HTTP data/chart checks passed.
+- Server restarted on 127.0.0.1:8001. Live-order guards unchanged. No broker
+  credentials printed, no extra service/package installed, no commit or push.
+
+## 2 November 2026 — project checkpoint and Git publication requested
+
+- Owner requested a Git record of completed work to choose the next development
+  path. Added PROJECT_STATUS.md and linked it prominently from README.
+- Status covers the offline foundation, secure broker settings/authentication,
+  CSRF correction, audit and bounded historical ingestion. It distinguishes the
+  completed first NIFTY session from missing strategies/backtests/scanner/ML.
+- Documented choices: strengthen historical data/calendar/backfill first, build
+  the M2 baseline simulator next, or prioritize operational/recovery work.
+  No new feature path or live-trading capability is enabled by this checkpoint.
+- Reviewed all pending source, migrations, tests and docs for publication to the
+  existing owner-approved public repository. Private databases, raw market data,
+  credentials, key material, logs, backups and the virtual environment stay local.
+- Checkpoint verification: 104 tests passed in 23.778 seconds; system, dependency
+  and migration-drift checks passed; HTTP smoke test passed. Reviewed 76 eligible
+  source/doc files, with no configured credential material, secret-pattern or
+  private-file matches. No new real broker request was made.

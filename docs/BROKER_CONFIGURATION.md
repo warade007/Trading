@@ -1,5 +1,10 @@
 # Secure Zerodha configuration — local research only
 
+Current verified implementation status and remaining security/dependency risks:
+[1 November code audit](CODE_AUDIT_2026-11-01.md). The subsequent bounded manual
+historical ingestion slice is documented in [Historical Data](HISTORICAL_DATA.md);
+scheduled collection and full exchange-calendar validation remain pending.
+
 The module is an owner-authorized read-only integration slice. It does not
 implement backtesting, scheduled downloads or order execution. Zerodha is the
 only permitted paid market-data provider; nothing here buys a subscription.
@@ -51,6 +56,23 @@ Logging out of Django ends dashboard access, not the broker session; use
 Disconnect to end broker API access explicitly.
 
 ## Key storage and fail-closed behavior
+
+### If sign-in shows a CSRF error
+
+Open a fresh `http://127.0.0.1:8001/accounts/login/` page, press Ctrl+F5, and submit
+the newly loaded form. Use the same hostname consistently and allow this local
+site's cookies. A stale tab opened before login or a server update can contain an
+old token; the recovery page offers a fresh sign-in link without exposing errors
+or submitted credentials. DEBUG must remain false and CSRF must remain enabled.
+
+The application uses `Referrer-Policy: same-origin` for forms. A blanket
+`no-referrer` policy can cause browser navigation POSTs to send `Origin: null`,
+which Django correctly rejects even when the form token is present. External
+referrers stay suppressed; the token-bearing Kite callback retains `no-referrer`.
+See [MDN's Origin interaction](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Referrer-Policy)
+and [Django's CSRF/referrer guidance](https://docs.djangoproject.com/en/5.2/ref/middleware/#referrer-policy).
+
+### Vault location and recovery
 
 `scripts/security_keys.py init` creates two independent secrets: a random Django
 signing key and a Fernet broker keyring. On Windows their bundle is encrypted by

@@ -1,5 +1,5 @@
 {% extends 'brokers/base.html' %}{% block content %}
-<h1>Broker Settings</h1><p>Zerodha Kite Connect · Research-only market data</p>
+<h1>Broker Settings</h1><p>Zerodha Kite Connect · Research-only market data · <a href="{% url 'historical_data' %}">Historical Data</a></p>
 {% if key_error %}<div class="notice error">{{ key_error }}</div>{% endif %}
 <section class="card"><h2>Connection status</h2><dl>
 <dt>Status</dt><dd>{{ connection_status }}</dd><dt>Saved API key</dt><dd>{{ masked_api_key }}</dd><dt>API secret</dt><dd>{% if has_secret %}Saved · encrypted · never redisplayed{% else %}Not set{% endif %}</dd>

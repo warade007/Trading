@@ -1,12 +1,13 @@
 from django.db import models
 from django.db.models import F, Q
+from django.conf import settings
 
 
 class Instrument(models.Model):
     exchange = models.CharField(max_length=16)
     symbol = models.CharField(max_length=64)
     kind = models.CharField(max_length=16, choices=[(x, x) for x in ("EQUITY", "ETF", "INDEX", "FUTURE", "OPTION")])
-    source_kind = models.CharField(max_length=16, choices=[("SYNTHETIC", "Synthetic"), ("USER_SUPPLIED", "User supplied")])
+    source_kind = models.CharField(max_length=16, choices=[("SYNTHETIC", "Synthetic"), ("USER_SUPPLIED", "User supplied"), ("ZERODHA", "Zerodha historical")])
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["exchange", "symbol", "source_kind"], name="instrument_source_identity")]
@@ -23,13 +24,14 @@ class InstrumentSnapshot(models.Model):
     expiry = models.DateField(null=True, blank=True)
     strike = models.DecimalField(max_digits=14, decimal_places=4, null=True, blank=True)
     option_type = models.CharField(max_length=2, blank=True)
-    lot_size = models.PositiveIntegerField()
-    tick_size = models.DecimalField(max_digits=14, decimal_places=4)
+    lot_size = models.PositiveIntegerField(null=True, blank=True)
+    tick_size = models.DecimalField(max_digits=14, decimal_places=4, null=True, blank=True)
+    master = models.ForeignKey("InstrumentMasterSnapshot", null=True, blank=True, on_delete=models.PROTECT)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=["instrument", "as_of"], name="dated_instrument_snapshot"),
-            models.CheckConstraint(condition=Q(lot_size__gt=0) & Q(tick_size__gt=0), name="positive_contract_units"),
+            models.CheckConstraint(condition=(Q(lot_size__gt=0) | Q(lot_size__isnull=True)) & (Q(tick_size__gt=0) | Q(tick_size__isnull=True)), name="positive_contract_units"),
         ]
 
 
@@ -81,3 +83,26 @@ class DataQualityIssue(models.Model):
     severity = models.CharField(max_length=8)
     row = models.PositiveIntegerField(null=True)
     message = models.TextField()
+
+
+class InstrumentMasterSnapshot(models.Model):
+    """Content-addressed SDK-decoded master, observed now; never backdated."""
+    sha256 = models.CharField(max_length=64, unique=True)
+    exchange = models.CharField(max_length=16, default="NSE")
+    observed_at = models.DateTimeField()
+    instrument_count = models.PositiveIntegerField()
+
+
+class HistoricalDownloadJob(models.Model):
+    """Orchestration state; DataIngestJob remains the dataset/QA record."""
+    request_key = models.CharField(max_length=64, unique=True)
+    master = models.ForeignKey(InstrumentMasterSnapshot, on_delete=models.PROTECT)
+    symbol = models.CharField(max_length=64)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    status = models.CharField(max_length=16, default="RUNNING")
+    error_code = models.CharField(max_length=32, blank=True)
+    dataset = models.ForeignKey(DataIngestJob, null=True, on_delete=models.PROTECT)
+    initiated_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)

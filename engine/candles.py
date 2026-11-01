@@ -93,14 +93,36 @@ def parse_manifest(raw: bytes) -> Manifest:
     if len(raw) > 65536:
         raise ValueError("Manifest exceeds 64 KiB.")
     data = json.loads(raw.decode("utf-8-sig"), object_pairs_hook=_unique_object)
-    if not isinstance(data, dict) or set(data) != {
+    required = {
         "format_version", "dataset_label", "source_kind", "source_reference",
         "instrument", "sessions",
-    }:
+    }
+    broker = isinstance(data, dict) and data.get("format_version") == 2
+    if broker:
+        required.add("provenance")
+    if not isinstance(data, dict) or set(data) != required:
         raise ValueError("Manifest requires the documented exact top-level schema.")
-    if type(data["format_version"]) is not int or data["format_version"] != 1:
-        raise ValueError("Only manifest format_version 1 is supported.")
-    if data["source_kind"] not in ("SYNTHETIC", "USER_SUPPLIED"):
+    if type(data["format_version"]) is not int or data["format_version"] not in (1, 2):
+        raise ValueError("Only manifest format_version 1 or 2 is supported.")
+    if broker:
+        provenance = data["provenance"]
+        if data["source_kind"] != "ZERODHA" or not isinstance(provenance, dict) or set(provenance) != {
+            "observed_at", "master_sha256", "response_sha256", "metadata_policy", "session_policy", "ingest_version", "response_representation",
+        }:
+            raise ValueError("Invalid broker provenance schema.")
+        observed = datetime.fromisoformat(provenance["observed_at"])
+        if observed.tzinfo is None:
+            raise ValueError("Broker observation timestamp must be timezone aware.")
+        for key in ("master_sha256", "response_sha256"):
+            value = provenance[key]
+            if not isinstance(value, str) or len(value) != 64 or any(c not in "0123456789abcdef" for c in value):
+                raise ValueError("Invalid broker content hash.")
+        if (provenance["metadata_policy"] != "CURRENT_SNAPSHOT_NOT_HISTORICALLY_VERIFIED"
+                or provenance["session_policy"] != "NSE_NORMAL_WEEKDAYS_ASSUMED_V1"
+                or provenance["ingest_version"] != "kite-ingest.1"
+                or provenance["response_representation"] != "SDK_DECODED_CANONICAL_JSON"):
+            raise ValueError("Unsupported broker metadata/session policy.")
+    elif data["source_kind"] not in ("SYNTHETIC", "USER_SUPPLIED"):
         raise ValueError("Source must be SYNTHETIC or USER_SUPPLIED (never verified as broker data).")
     for key in ("dataset_label", "source_reference"):
         if not isinstance(data[key], str) or not 1 <= len(data[key].strip()) <= 200:
@@ -121,10 +143,13 @@ def parse_manifest(raw: bytes) -> Manifest:
     if not isinstance(item["option_type"], str) or len(item["option_type"]) > 2:
         raise ValueError("option_type must be a string: CE, PE or empty.")
     snapshot_date = date.fromisoformat(item["snapshot_date"])
-    if not isinstance(item["tick_size"], str):
+    unknown_tick = broker and item["kind"] == "INDEX" and item["tick_size"] is None
+    if not unknown_tick and not isinstance(item["tick_size"], str):
         raise ValueError("tick_size must be a decimal string.")
-    price(item["tick_size"])
-    if type(item["lot_size"]) is not int or not 1 <= item["lot_size"] <= 2_147_483_647:
+    if not unknown_tick:
+        price(item["tick_size"])
+    unknown_lot = broker and item["kind"] == "INDEX" and item["lot_size"] is None
+    if not unknown_lot and (type(item["lot_size"]) is not int or not 1 <= item["lot_size"] <= 2_147_483_647):
         raise ValueError("lot_size must be a positive integer.")
     if item["expiry"] is not None and not isinstance(item["expiry"], str):
         raise ValueError("expiry must be an ISO date string or null.")
@@ -149,7 +174,7 @@ def parse_manifest(raw: bytes) -> Manifest:
         opening, closing = time.fromisoformat(entry["open"]), time.fromisoformat(entry["close"])
         if any(t.tzinfo or t.second or t.microsecond for t in (opening, closing)) or opening >= closing:
             raise ValueError("Session times must be minute-aligned local times within one date.")
-        if day < snapshot_date or (expiry and day > expiry):
+        if (not broker and day < snapshot_date) or (expiry and day > expiry):
             raise ValueError("Session outside instrument snapshot/expiry validity.")
         session = Session(datetime.combine(day, opening, IST).astimezone(UTC),
                           datetime.combine(day, closing, IST).astimezone(UTC))
@@ -165,6 +190,11 @@ def parse_manifest(raw: bytes) -> Manifest:
 def validate_csv(raw: bytes, manifest: Manifest) -> QualityResult:
     expected = {s.start + i * MINUTE for s in manifest.sessions for i in range(s.minutes)}
     result = QualityResult([], [], len(expected))
+    if manifest.raw["source_kind"] == "ZERODHA":
+        result.issues.extend([
+            Issue("CURRENT_METADATA", "Instrument metadata was observed at download time; historical tick/lot validity is not verified. Current tick alignment is not imposed on historical prices.", "WARNING"),
+            Issue("ASSUMED_CALENDAR", "Normal NSE weekday sessions assumed; holidays and special sessions are not certified. Missing weekdays remain gaps; weekends are not assessed.", "WARNING"),
+        ])
     if len(raw) > MAX_BYTES:
         result.issues.append(Issue("FILE_LIMIT", "CSV exceeds 4 MiB."))
         return result
@@ -195,8 +225,8 @@ def validate_csv(raw: bytes, manifest: Manifest) -> QualityResult:
                 opening, high, low, close = prices
                 if not low <= min(opening, close) <= max(opening, close) <= high:
                     raise ValueError("Invalid OHLC high/low relationship.")
-                tick = price(manifest.metadata["tick_size"])
-                if any(p % tick for p in prices):
+                tick = price(manifest.metadata["tick_size"]) if manifest.metadata["tick_size"] is not None else None
+                if manifest.raw["source_kind"] != "ZERODHA" and tick and any(p % tick for p in prices):
                     raise ValueError("Price not aligned to snapshot tick_size.")
                 if manifest.metadata["kind"] == "INDEX":
                     if row["volume"] != "":

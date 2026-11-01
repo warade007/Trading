@@ -1,0 +1,16 @@
+{% extends 'brokers/base.html' %}{% block content %}
+<h1>Historical Data</h1><p>Read-only Zerodha candles · Local research storage</p>
+<p><a href="{% url 'broker_settings' %}">Broker Settings</a> · <a href="/">Research dashboard</a></p>
+<div class="notice"><strong>Historical prices are research inputs, not strategy performance.</strong><br>NIFTY 50 is an index reference: traded volume and order-book depth are unavailable. These candles alone cannot validate options P&amp;L.</div>
+<section class="card"><h2>1. Sync NSE instruments</h2>
+<form method="post" action="{% url 'historical_sync' %}">{% csrf_token %}<button type="submit">Sync NSE instrument list</button></form>
+{% if master %}<p>Saved {{ master.instrument_count }} records · observed {{ master.observed_at|date:'Y-m-d H:i:s' }} IST</p><p class="muted">Master SHA-256: <code>{{ master.sha256 }}</code></p>{% else %}<p>Sync once before selecting an instrument. No broker request is made just by opening this page.</p>{% endif %}
+{% if catalog_error %}<p class="error">{{ catalog_error }}</p>{% endif %}</section>
+<section class="card"><h2>2. Fetch completed 1-minute candles</h2>
+{% if master %}<form method="post" action="{% url 'historical_fetch' %}">{% csrf_token %}{{ form.as_p }}<button type="submit">Fetch, validate and save candles</button></form>{% else %}<p>Instrument selection becomes available after synchronization.</p>{% endif %}
+<p class="muted">Up to seven calendar days within the last 90 days per request. Today is excluded. Requests are paced and synchronous; wait for completion. Repeat downloads using the same master and dates reuse the stored result.</p>
+<p class="muted">Session assumption: NSE weekdays, 09:15–15:30 IST. Holidays/special sessions are not certified; missing weekdays are flagged, and weekends are not assessed. Current instrument metadata is not claimed to be historically valid. Both limitations appear in each quality report.</p></section>
+<section class="card"><h2>Download history</h2><div class="scroll"><table><thead><tr><th>Instrument / period</th><th>Status</th><th>1m coverage</th><th>Dataset / quality</th></tr></thead><tbody>
+{% for job in jobs %}<tr><td>{{ job.symbol }}<br>{{ job.start_date|date:'Y-m-d' }} – {{ job.end_date|date:'Y-m-d' }}</td><td>{{ job.status }}{% if job.safe_error %}<br>{{ job.safe_error }}{% endif %}</td><td>{% if job.dataset %}{{ job.dataset.imported_minutes }}/{{ job.dataset.expected_minutes }}{% else %}—{% endif %}</td><td>{% if job.dataset %}<a href="/?dataset={{ job.dataset_id }}">Open dataset {{ job.dataset_id }}</a>{% else %}No accepted dataset{% endif %}</td></tr>{% empty %}<tr><td colspan="4">No download requests yet.</td></tr>{% endfor %}
+</tbody></table></div></section>
+{% endblock %}

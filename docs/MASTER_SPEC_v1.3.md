@@ -1,12 +1,16 @@
 # PERSONAL INDIA MARKET INTELLIGENCE & TRADING RESEARCH PLATFORM
 
-**Master specification:** v1.4.1 (legacy filename retained for existing links)<br>
+**Master specification:** v1.5 (legacy filename retained for existing links)<br>
 **As of:** 1 November 2026<br>
 **Owner:** Single private Indian retail user<br>
 **Git repository:** `https://github.com/warade007/Trading.git` (owner-approved public source; personal data and secrets remain private)<br>
 **Implementer:** Codex in VS Code; Python/Django<br>
 **Status:** Design approved for **local research, backtesting, and compliant simulation only**. No live trading authorized.<br>
 **Authority:** This document supersedes earlier proposal details when they conflict, especially paid-data-provider suggestions and live execution settings. Retain previous design documents as archives, never as sources of conflicting requirements.
+
+**Verified implementation status:** See [the 1 November 2026 code audit](CODE_AUDIT_2026-11-01.md).
+The specification is a roadmap, not a statement that all listed modules exist.
+The subsequent bounded ingestion slice is documented in [Historical Data](HISTORICAL_DATA.md).
 
 > **Non-negotiable economic truth:** We aim to research robust, long-run positive *net* expectancy, but cannot guarantee any profit, 90% success, safe stop fills, or reliable predictions. The owner explicitly cannot afford losses now. Real-money placement must remain technically impossible in the default system. Do not let agent confidence or profit targets override this.
 
@@ -418,3 +422,31 @@ is retained unchanged as the prior approved baseline.
   information, logs, backups and local environments remain excluded from Git.
 - Public source publication does not authorize hosted deployment, exposing the
   localhost application or enabling real orders. Research-only controls remain.
+
+## 25. v1.5 — bounded historical ingestion, 1 November 2026
+
+- Owner requested candle collection using the connected broker and selected
+  **NIFTY 50 index reference data** for the first real download.
+- Implement administrator/CSRF-protected manual NSE master sync and completed
+  historical 1m download, using the existing encrypted read-only connection.
+  First slice: at most seven calendar days within the last 90 days, excluding
+  today. Resumable request state and idempotent completed-request reuse are local.
+- Keep original format-1 synthetic/user-supplied imports unchanged. Broker-only
+  format-2 manifests record ZERODHA source, current master observation date,
+  master/response hashes, SDK-decoded response representation and ingestion version.
+- Do not backdate a current instrument snapshot to pass historical validation.
+  Allow broker history earlier than observation only with explicit unverified
+  historical-metadata policy and a visible quality caveat. Current tick alignment
+  is not imposed on those historical prices; exact historical contract metadata
+  and corporate-action verification remain future work.
+- NIFTY reference instruments have no tradable lot size/tick or traded volume.
+  Preserve raw broker zero fields privately, normalize these research fields to
+  unavailable/NULL, and never fabricate index VWAP, liquidity or option P&L.
+- The initial calendar assumes normal NSE weekdays 09:15–15:30 IST. Holidays are
+  not silently excluded: missing declared weekdays remain gaps. Weekends and
+  special sessions are not assessed. Show this caveat rather than claim a fully
+  verified exchange calendar. Full calendar ingestion remains a later gate.
+- Archive decoded raw responses, normalize/validate, atomically store datasets,
+  derive only complete 5m/15m bars, and retain accepted/rejected quality reports.
+  No real/derived market data enters Git. No orders, new paid services, scheduler
+  or WebSocket server is added. M2 backtesting and remaining M3 gates stay open.

@@ -2,6 +2,18 @@
 
 **RESEARCH ONLY — LIVE ORDERS DISABLED**
 
+**Start here:** [What we completed and the next development choices](docs/PROJECT_STATUS.md)
+— checkpoint dated 2 November 2026.
+
+Verified status, 1 November 2026: offline research, Zerodha authentication and a
+bounded **Historical Data download-and-save workflow** work locally. The first
+NIFTY 50 sample contains 375 one-minute, 75 five-minute and 25 fifteen-minute
+candles for 30 October 2026. **104 tests pass.** Strategy/backtesting, scanner,
+indicator, risk-simulation and AI modules remain future work.
+See the [Historical Data runbook](docs/HISTORICAL_DATA.md) for current usage and
+limitations. The [earlier audit](docs/CODE_AUDIT_2026-11-01.md) records the state
+before this ingestion slice, including dependency risks that remain unresolved.
+
 Local Python/Django research software with optional administrator-only Zerodha
 configuration and interactive read-only API authentication. There are no order
 APIs, live-trading controls, frontend CDN assets or additional paid services.
@@ -16,6 +28,10 @@ Enter your API key and secret there, save, and click **Login with Zerodha**.
 The exact registered callback is `http://127.0.0.1:8001/kite/callback` (no trailing
 slash). Full setup, key backup/rotation and recovery:
 [Broker Settings runbook](docs/BROKER_CONFIGURATION.md).
+
+**Historical Data:** http://127.0.0.1:8001/historical/. Sign in, sync the NSE master,
+select NIFTY 50 and a past period, then fetch/validate/save. Existing encrypted
+credentials are used automatically. No keys are entered on the data page.
 
 ## Windows PowerShell setup
 
@@ -185,7 +201,7 @@ later milestones. These are roadmap entries, not empty operational modules.
 
 The owner authorized secure broker configuration and read-only service access
 ahead of M2 on 1 November 2026. Scheduled downloading and historical ingestion
-remain future work; connectivity does not import into research datasets.
+automation remain future work; bounded manual historical ingestion is available.
 Universal scanning,
 options archiving, indicators beyond baseline needs, and ML follow the governing
 [master specification](docs/MASTER_SPEC_v1.3.md). No live execution is authorized.

@@ -55,11 +55,19 @@ def _archive(raw, csv_hash, canonical_manifest, manifest_hash):
 def import_dataset(csv_path, manifest_path):
     raw = _read_bounded(csv_path, MAX_BYTES)
     manifest_raw = _read_bounded(manifest_path, 65536)
+    return import_candle_bytes(raw, manifest_raw)
+
+
+def import_candle_bytes(raw, manifest_raw, *, broker_download=False):
+    if len(raw) > MAX_BYTES or len(manifest_raw) > 65536:
+        raise ValueError("Input exceeds the import budget.")
     # Validate manifest before any writes. Invalid manifests cannot define provenance.
     try:
         manifest = parse_manifest(manifest_raw)
     except (TypeError, KeyError, InvalidOperation, UnicodeError, OverflowError) as exc:
         raise ValueError(f"Invalid manifest: {exc}") from exc
+    if manifest.raw["source_kind"] == "ZERODHA" and not broker_download:
+        raise ValueError("ZERODHA provenance can only be created by the broker download workflow.")
     csv_hash = hashlib.sha256(raw).hexdigest()
     canonical_manifest = json.dumps(manifest.raw, sort_keys=True, separators=(",", ":")).encode()
     manifest_hash = hashlib.sha256(canonical_manifest).hexdigest()
@@ -93,7 +101,7 @@ def import_dataset(csv_path, manifest_path):
                         "expiry": date.fromisoformat(item["expiry"]) if item["expiry"] else None,
                         "strike": Decimal(item["strike"]) if item["strike"] else None,
                         "option_type": item["option_type"], "lot_size": item["lot_size"],
-                        "tick_size": Decimal(item["tick_size"]),
+                        "tick_size": Decimal(item["tick_size"]) if item["tick_size"] is not None else None,
                     }
                     snapshot, _ = InstrumentSnapshot.objects.get_or_create(
                         instrument=instrument, as_of=date.fromisoformat(item["snapshot_date"]), defaults=values

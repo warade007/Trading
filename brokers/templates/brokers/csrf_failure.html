@@ -1,0 +1,7 @@
+{% extends 'brokers/base.html' %}{% block content %}
+<h1>Please reload and try again</h1>
+<section class="card"><p>Your form's security check could not be verified. It may have expired or come from an older browser tab.</p>
+<p>Open a fresh sign-in page and submit the form again. Use <code>http://127.0.0.1:8001</code> consistently and allow cookies for this local site.</p>
+<p><a href="{% url 'administrator_login' %}">Open a fresh sign-in page</a>{% if user.is_authenticated %} · <a href="{% url 'broker_settings' %}">Return to Broker Settings</a>{% endif %}</p>
+<p class="muted">The request was blocked before making changes. CSRF protection remains enabled.</p></section>
+{% endblock %}

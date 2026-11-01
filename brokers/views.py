@@ -29,6 +29,11 @@ def administrator(view):
     return wrapped
 
 
+def csrf_failure(request, reason=""):
+    # Never reflect submitted data, origin values or Django's diagnostic reason.
+    return render(request, "brokers/csrf_failure.html", status=403)
+
+
 class AdministratorLoginView(LoginView):
     template_name = "brokers/login.html"
     authentication_form = AdministratorAuthenticationForm

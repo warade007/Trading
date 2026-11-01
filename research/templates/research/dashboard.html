@@ -21,8 +21,9 @@
 <body>
 <div class="safety">RESEARCH ONLY — LIVE ORDERS DISABLED</div>
 <main>
-  <header><div><div class="eyebrow">Indian Market Lab / Local workspace</div><h1>Research dashboard</h1><p class="muted">Intraday data foundation · Synthetic research datasets</p></div><div><a class="pill" href="/settings/broker/">Broker Settings</a><p class="muted compact">Optional read-only Zerodha connection</p></div></header>
+  <header><div><div class="eyebrow">Indian Market Lab / Local workspace</div><h1>Research dashboard</h1><p class="muted">Intraday data foundation · Source-labeled research datasets</p></div><div><a class="pill" href="/historical/">Historical Data</a> <a class="pill" href="/settings/broker/">Broker Settings</a><p class="muted compact">Optional read-only Zerodha connection</p></div></header>
   {% if job.source_kind == 'SYNTHETIC' %}<div class="notice"><strong>SYNTHETIC DEMO — NOT ACTUAL PERFORMANCE</strong><br>Artificial prices for engineering validation. No signals, trades or investment returns.</div>
+  {% elif job.source_kind == 'ZERODHA' %}<div class="notice"><strong>ZERODHA HISTORICAL DATA — NOT STRATEGY PERFORMANCE</strong><br>Read-only broker data stored locally. Coverage is against declared sessions. Index volume remains unavailable; exact option-contract history is required for options P&amp;L.</div>
   {% elif job %}<div class="notice"><strong>USER-SUPPLIED DATA — SOURCE NOT INDEPENDENTLY VERIFIED</strong><br>Coverage describes the declared sessions only. This is not a performance report.</div>
   {% else %}<div class="notice">No dataset loaded. In PowerShell, run <code>.\.venv\Scripts\python.exe manage.py load_demo</code> after migrations.</div>{% endif %}
   {% if job %}
@@ -61,5 +62,5 @@
     <li>Index signals without exact option contract history are not a valid options P&amp;L backtest.</li>
     <li>Unverified news timestamps are not qualified causal features.</li>
   </ul><p class="muted">Next: deterministic backtesting baselines, conservative simulated fills and versioned costs. Scanner, indicators, risk simulation and ML are later milestones.</p></section>
-  <footer>Private local research · Read-only dashboard · All imports run through local management commands</footer>
+  <footer>Private local research · Read-only dashboard · Imports via local commands or administrator Historical Data page</footer>
 </main></body></html>

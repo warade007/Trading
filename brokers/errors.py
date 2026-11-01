@@ -1,4 +1,11 @@
 MESSAGES = {
+    "CATALOG_REQUIRED": "Sync the NSE instrument list first.",
+    "INSTRUMENT_NOT_FOUND": "The selected NSE instrument was not found in this saved master. Sync instruments and select it again.",
+    "DOWNLOAD_BUSY": "A historical request is running. Wait before retrying; interrupted requests may be resumed after ten minutes.",
+    "INVALID_MARKET_DATA": "Broker data or its local archive failed validation. No unvalidated candles were accepted.",
+    "DATA_REJECTED": "The historical response failed candle validation. Open its quality report.",
+    "NO_CANDLES": "No candles were returned. Check the date, market holiday, instrument and historical-data access. No subscription was purchased.",
+    "ARCHIVE_LIMIT": "The local archive is full or unavailable. Review private storage before retrying.",
     "KEY_UNAVAILABLE": "Encryption key unavailable or ciphertext unreadable. Restore the separate keyring; credentials were not replaced.",
     "NOT_CONFIGURED": "Save and enable Zerodha settings first.",
     "LOGIN_REQUIRED": "Log in with Zerodha to create a new API session.",

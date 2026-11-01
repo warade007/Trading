@@ -11,15 +11,22 @@ class LocalReadOnlyMiddleware:
             return HttpResponseForbidden("Local research access only.")
         request.get_host()
         writable = request.path in {"/accounts/login/", "/accounts/logout/", "/settings/broker/", "/settings/broker/test/", "/settings/broker/login/", "/settings/broker/disconnect/", "/settings/broker/delete/"}
+        writable = writable or request.path in {"/historical/sync/", "/historical/fetch/"}
         if request.method not in {"GET", "HEAD"} and not (request.method == "POST" and writable):
             return HttpResponseNotAllowed(["GET", "HEAD"])
         response = self.get_response(request)
-        if response.status_code >= 500 and request.path.startswith(("/settings/broker", "/kite/", "/accounts/")):
+        if response.status_code >= 500 and request.path.startswith(("/settings/broker", "/kite/", "/accounts/", "/historical/")):
             response = HttpResponse("Broker request could not be completed. No credentials are displayed. Try again or review the safe audit log.", status=500)
         response["Content-Security-Policy"] = (
             "default-src 'none'; style-src 'unsafe-inline'; "
             "base-uri 'none'; frame-ancestors 'none'; form-action 'self' https://kite.zerodha.com"
         )
-        response["Referrer-Policy"] = "no-referrer"
+        # Browser form POSTs can acquire Origin: null under no-referrer.
+        # Keep same-origin form metadata while suppressing external referrers.
+        # The token-bearing callback must never become a referrer, even locally.
+        if request.path == "/kite/callback":
+            response["Referrer-Policy"] = "no-referrer"
+        else:
+            response.setdefault("Referrer-Policy", "same-origin")
         response["Cache-Control"] = "no-store"
         return response
